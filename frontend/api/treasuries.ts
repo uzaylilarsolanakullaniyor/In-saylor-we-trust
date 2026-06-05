@@ -14,6 +14,18 @@
 
 const COINS = ["bitcoin", "ethereum", "solana"] as const;
 
+// CoinGecko rate-limits keyless requests from cloud/datacenter IPs (like
+// Vercel's) with HTTP 429. A free Demo key fixes that. It lives ONLY here on
+// the server (env var WITHOUT the VITE_ prefix), so it's never exposed to the
+// browser. Set COINGECKO_API_KEY in Vercel's project env vars.
+const COINGECKO_KEY = process.env.COINGECKO_API_KEY ?? "";
+
+function cgHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (COINGECKO_KEY) headers["x-cg-demo-api-key"] = COINGECKO_KEY;
+  return headers;
+}
+
 export default async function handler(_req: unknown, res: any) {
   const out: Record<string, unknown> = {};
 
@@ -24,7 +36,7 @@ export default async function handler(_req: unknown, res: any) {
       try {
         const r = await fetch(
           `https://api.coingecko.com/api/v3/companies/public_treasury/${coin}`,
-          { headers: { accept: "application/json" } },
+          { headers: cgHeaders() },
         );
         out[coin] = r.ok ? await r.json() : { error: `HTTP ${r.status}` };
       } catch (e) {
