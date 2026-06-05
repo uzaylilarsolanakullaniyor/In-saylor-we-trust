@@ -6,7 +6,7 @@
 // ============================================================
 
 import type { CompanyPnL } from "../lib/coingecko";
-import { fmtUsdShort, fmtCoin } from "../lib/coingecko";
+import { fmtUsdShort, fmtCoin, fmtPrice } from "../lib/coingecko";
 
 // Map CoinGecko coin id -> badge style class.
 const COIN_CLASS: Record<string, string> = {
@@ -76,16 +76,23 @@ export function PnLPanel({ data }: { data: CompanyPnL }) {
   // Full P/L layout (Strategy).
   const up = data.pnlUsd >= 0;
   const pctStr = `${data.pnlPercent >= 0 ? "+" : ""}${data.pnlPercent.toFixed(2)}%`;
+  const avgCost = data.holdings > 0 ? data.costBasisUsd / data.holdings : 0;
 
   return (
     <>
       {head}
 
       <div className="pl">
-        <span className="arrow">{up ? "▲" : "▼"}</span>
+        <span className="pl__badge">{up ? "▲" : "▼"}</span>
         <span className="pl__val">{fmtUsdShort(data.pnlUsd)}</span>
         <span className="pl__pct">{pctStr}</span>
       </div>
+
+      {avgCost > 0 && (
+        <div className="avgcost">
+          Avg cost <strong>{fmtPrice(avgCost)}</strong> / {company.coinSymbol}
+        </div>
+      )}
 
       <dl className="grid">
         <div>

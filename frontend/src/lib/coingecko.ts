@@ -131,5 +131,13 @@ export const fmtUsdShort = (n: number) => {
 export const fmtCoin = (n: number, symbol: string) =>
   `${n.toLocaleString("en-US", { maximumFractionDigits: 0 })} ${symbol}`;
 
+// Per-coin price, e.g. $75,705 (no decimals for big prices, 2 for small).
+export const fmtPrice = (n: number) =>
+  n.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: n >= 100 ? 0 : 2,
+  });
+
 export const fmtPercent = (n: number) =>
   `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`;
