@@ -3,6 +3,7 @@
 // First time -> vote(); if already voted -> changeVote(). Gas only.
 // ============================================================
 
+import { useEffect, useRef } from "react";
 import { useAccount, useReadContract, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { encodeFunctionData, concatHex } from "viem";
 import { CONTRACT_ADDRESS, SENTIMENT_ABI, Sentiment, BUILDER_CODE_SUFFIX } from "../lib/contract";
@@ -39,7 +40,7 @@ export function VoteButtons({
   const { sendTransaction, data: txHash, isPending, error } = useSendTransaction();
 
   // Wait for the tx to be mined, then refresh the UI.
-  const { isLoading: isMining } = useWaitForTransactionReceipt({
+  const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
     query: { enabled: Boolean(txHash) },
   });
@@ -48,11 +49,17 @@ export function VoteButtons({
   const hasVoted = currentVote !== Sentiment.None;
   const cooldownSecs = cooldown ? Number(cooldown) : 0;
 
-  // After mining completes, refresh user vote + parent tallies once.
-  if (txHash && !isMining) {
-    refetchUserVote();
-    onVoted();
-  }
+  // After a tx is confirmed, refresh the user's vote + the parent tallies —
+  // exactly ONCE per transaction. The ref guard prevents an infinite loop
+  // (onVoted() re-renders the parent, which must not re-trigger this).
+  const handledTx = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (isConfirmed && txHash && handledTx.current !== txHash) {
+      handledTx.current = txHash;
+      refetchUserVote();
+      onVoted();
+    }
+  }, [isConfirmed, txHash, refetchUserVote, onVoted]);
 
   function cast(choice: Sentiment) {
     if (!isConnected || currentVote === choice) return;
