@@ -3,8 +3,9 @@
 // First time -> vote(); if already voted -> changeVote(). Gas only.
 // ============================================================
 
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { CONTRACT_ADDRESS, SENTIMENT_ABI, Sentiment } from "../lib/contract";
+import { useAccount, useReadContract, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { encodeFunctionData, concatHex } from "viem";
+import { CONTRACT_ADDRESS, SENTIMENT_ABI, Sentiment, BUILDER_CODE_SUFFIX } from "../lib/contract";
 
 export function VoteButtons({
   companyId,
@@ -33,8 +34,9 @@ export function VoteButtons({
     query: { enabled: Boolean(address), refetchInterval: 10_000 },
   });
 
-  // The write hook: sends the transaction; the wallet pops up for signing.
-  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+  // We send a raw transaction (not writeContract) so we can append the Base
+  // builder-code suffix to the calldata for on-chain attribution.
+  const { sendTransaction, data: txHash, isPending, error } = useSendTransaction();
 
   // Wait for the tx to be mined, then refresh the UI.
   const { isLoading: isMining } = useWaitForTransactionReceipt({
@@ -55,21 +57,21 @@ export function VoteButtons({
   function cast(choice: Sentiment) {
     if (!isConnected || currentVote === choice) return;
 
-    if (!hasVoted) {
-      writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: SENTIMENT_ABI,
-        functionName: "vote",
-        args: [companyId, choice],
-      });
-    } else {
-      writeContract({
-        address: CONTRACT_ADDRESS,
-        abi: SENTIMENT_ABI,
-        functionName: "changeVote",
-        args: [companyId, choice],
-      });
-    }
+    // First-timers call vote(); repeat voters call changeVote().
+    const functionName = hasVoted ? "changeVote" : "vote";
+
+    // Build the function calldata, then append the builder-code suffix.
+    // The contract ignores the trailing bytes; Base attributes the activity.
+    const calldata = encodeFunctionData({
+      abi: SENTIMENT_ABI,
+      functionName,
+      args: [companyId, choice],
+    });
+
+    sendTransaction({
+      to: CONTRACT_ADDRESS,
+      data: concatHex([calldata, BUILDER_CODE_SUFFIX]),
+    });
   }
 
   // Disable "change" while cooldown is active (the contract enforces it too,

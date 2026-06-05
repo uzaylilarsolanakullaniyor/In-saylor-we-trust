@@ -7,13 +7,25 @@
 
 import { base, baseSepolia } from "wagmi/chains";
 
-// --- Which chain are we on? Driven by .env (defaults to testnet). ---
+// --- Which chain are we on? Defaults to Base mainnet; set VITE_CHAIN to
+// "base-sepolia" to use the testnet instead. ---
 export const ACTIVE_CHAIN =
-  import.meta.env.VITE_CHAIN === "base" ? base : baseSepolia;
+  import.meta.env.VITE_CHAIN === "base-sepolia" ? baseSepolia : base;
 
-// --- Deployed contract address (0x0 until you deploy). ---
-export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS ??
-  "0x0000000000000000000000000000000000000000") as `0x${string}`;
+// --- Deployed contract address. Live on Base mainnet. The env var can
+// override it, but we hardcode the deployed address as the default so the
+// app works even if the env var isn't set. ---
+export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS ||
+  "0x52fd75BD49712980F0f449e81499D84b26642018") as `0x${string}`;
+
+// --- Base Builder Code (ERC-8021 attribution) ---
+// This encoded suffix is appended to the END of our vote transactions'
+// calldata. The contract ignores the extra bytes; Base's indexer reads them
+// and attributes the on-chain activity to builder code "bc_x9ewdvub", which
+// is what makes the app eligible for Builder Rewards / potential airdrops.
+// (Generated from the Base builder-codes tool — see docs.base.org/apps/builder-codes.)
+export const BUILDER_CODE_SUFFIX =
+  "0x62635f78396577647675620b0080218021802180218021802180218021" as `0x${string}`;
 
 // --- Sentiment enum mirror (must match the Solidity enum order). ---
 export enum Sentiment {
