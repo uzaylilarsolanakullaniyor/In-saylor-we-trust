@@ -21,11 +21,11 @@ export const CONTRACT_ADDRESS = (import.meta.env.VITE_CONTRACT_ADDRESS ||
 // --- Base Builder Code (ERC-8021 attribution) ---
 // This encoded suffix is appended to the END of our vote transactions'
 // calldata. The contract ignores the extra bytes; Base's indexer reads them
-// and attributes the on-chain activity to builder code "bc_x9ewdvub", which
+// and attributes the on-chain activity to builder code "bc_exla6y5l", which
 // is what makes the app eligible for Builder Rewards / potential airdrops.
 // (Generated from the Base builder-codes tool — see docs.base.org/apps/builder-codes.)
 export const BUILDER_CODE_SUFFIX =
-  "0x62635f78396577647675620b0080218021802180218021802180218021" as `0x${string}`;
+  "0x62635f65786c613679356c0b0080218021802180218021802180218021" as `0x${string}`;
 
 // --- Sentiment enum mirror (must match the Solidity enum order). ---
 export enum Sentiment {
