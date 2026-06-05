@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>In Saylor We Trust — Preview</title>
+<style>
+:root{
+  --green:#22c55e;--green-glow:#22c55e44;--red:#ef4444;--red-glow:#ef444444;
+  --bg:#070a10;--bg2:#0c111b;--card:#121826;--card2:#161d2e;
+  --text:#eef2f8;--muted:#7d879c;--border:#222a3c;--accent:#3b82f6;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;color:var(--text);min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
+  background:
+    radial-gradient(900px 500px at 15% -10%, #14306022 0%, transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, #2b145022 0%, transparent 55%),
+    linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+  background-attachment:fixed;}
+.app{max-width:1120px;margin:0 auto;padding:2.5rem 1.1rem 4rem}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:2rem}
+.hdr h1{margin:0 0 .35rem;font-size:2.15rem;letter-spacing:-.02em;font-weight:800;
+  background:linear-gradient(90deg,#fff 0%,#a9c2ff 55%,#7dd3a8 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hdr__sub{color:var(--muted);margin:0 0 1rem;font-size:.95rem}
+.pills{display:flex;gap:.5rem;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:.9rem}
+.pill{display:inline-flex;align-items:center;gap:.4rem;font-size:.74rem;font-weight:600;
+  padding:.34rem .7rem;border-radius:999px;border:1px solid var(--border);background:#ffffff08}
+.pill--chain{color:#9db8ff;border-color:#2c3a66}
+.pill--live{color:var(--green)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 var(--green-glow);
+  animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 var(--green-glow)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.demo-note{color:var(--muted);font-size:.74rem;margin-top:.2rem}
+
+/* Wallet */
+.wallet{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:.4rem}
+.wallet__addr{padding:.42rem .8rem;background:linear-gradient(90deg,#22c55e22,#3b82f622);
+  color:#bff5d2;border:1px solid #2c4a3a;border-radius:8px;font-family:ui-monospace,monospace;font-size:.8rem}
+.btn-ghost{background:#ffffff0a;color:var(--text);border:1px solid var(--border);
+  padding:.42rem .8rem;border-radius:8px;cursor:pointer;font-size:.8rem;transition:.15s}
+.btn-ghost:hover{border-color:#3b465c;background:#ffffff14}
+
+/* Cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:1.25rem;margin-top:1.6rem}
+.card{position:relative;background:linear-gradient(180deg,var(--card2),var(--card));
+  border:1px solid var(--border);border-radius:18px;padding:1.25rem;overflow:hidden;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;opacity:.9}
+.card.up::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+.card.down::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.card:hover{transform:translateY(-4px);border-color:#33405c;box-shadow:0 18px 40px -18px #000}
+
+/* P/L head */
+.phead{display:flex;align-items:center;gap:.6rem;margin-bottom:1rem}
+.coin{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.85rem;
+  border:1px solid var(--border)}
+.coin.btc{background:#f7931a22;color:#f7931a}
+.coin.eth{background:#627eea22;color:#8aa0f5}
+.coin.sol{background:#14f19522;color:#34e2a8}
+.phead__t{display:flex;flex-direction:column}
+.ticker{font-weight:800;font-size:1.05rem;line-height:1}
+.subname{color:var(--muted);font-size:.74rem;margin-top:.2rem}
+
+/* Big P/L */
+.pl{display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0 .1rem}
+.pl__val{font-size:1.55rem;font-weight:800;letter-spacing:-.02em}
+.pl__pct{font-size:.85rem;font-weight:700;padding:.12rem .45rem;border-radius:6px}
+.up .pl__val{color:var(--green)} .up .pl__pct{color:var(--green);background:var(--green-glow)}
+.down .pl__val{color:var(--red)} .down .pl__pct{color:var(--red);background:var(--red-glow)}
+.arrow{font-size:.9rem}
+
+/* Stats grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem .9rem;margin:.9rem 0 .2rem;
+  padding:.75rem;background:#0000002e;border:1px solid #ffffff08;border-radius:10px}
+.grid dt{color:var(--muted);font-size:.66rem;text-transform:uppercase;letter-spacing:.04em}
+.grid dd{margin:.12rem 0 0;font-size:.92rem;font-weight:700}
+.updated{color:var(--muted);font-size:.68rem;margin-top:.55rem;display:flex;align-items:center;gap:.35rem}
+
+/* Sentiment bar */
+.bar{margin:1.05rem 0 .9rem}
+.track{display:flex;height:16px;border-radius:9px;overflow:hidden;background:#0000003a;border:1px solid #ffffff0a}
+.bull{background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .45s cubic-bezier(.4,0,.2,1)}
+.bear{background:linear-gradient(90deg,#ef4444,#b91c1c);transition:width .45s cubic-bezier(.4,0,.2,1)}
+.legend{display:flex;justify-content:space-between;font-size:.76rem;margin-top:.42rem;font-weight:600}
+.legend .b1{color:var(--green)} .legend .b2{color:var(--red)} .legend .ct{color:var(--muted)}
+
+/* Vote */
+.vote{display:flex;flex-wrap:wrap;gap:.55rem}
+.vbtn{flex:1 1 120px;padding:.66rem;border-radius:10px;border:1px solid var(--border);
+  background:#ffffff0a;color:var(--text);cursor:pointer;font-weight:700;font-size:.9rem;transition:.15s}
+.vbtn:hover{border-color:#3b465c;background:#ffffff14}
+.vbtn.bull.on{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:#22c55e;color:#04130a;box-shadow:0 6px 18px -8px var(--green)}
+.vbtn.bear.on{background:linear-gradient(180deg,#ef4444,#b91c1c);border-color:#ef4444;color:#1a0606;box-shadow:0 6px 18px -8px var(--red)}
+.vstatus{flex-basis:100%;font-size:.74rem;color:var(--muted);min-height:1.1em;margin-top:.1rem}
+.vstatus strong{color:var(--text)}
+
+.foot{color:var(--muted);font-size:.78rem;text-align:center;margin-top:2.4rem;line-height:1.5}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="hdr">
+    <h1>🫡 In Saylor We Trust</h1>
+    <p class="hdr__sub">Live P/L of crypto treasury portfolios + on-chain bull/bear voting</p>
+    <div class="pills">
+      <span class="pill pill--chain">⬡ Base Mainnet</span>
+      <span class="pill pill--live"><span class="dot"></span> LIVE</span>
+    </div>
+    <div class="wallet">
+      <span class="wallet__addr">0x7a3f…9c21</span>
+      <button class="btn-ghost">Disconnect</button>
+    </div>
+    <p class="demo-note">⚠️ Preview — sample data only. Votes are local; live chain &amp; CoinGecko not connected yet.</p>
+  </header>
+
+  <section class="cards" id="cards"></section>
+
+  <footer class="foot">
+    P/L is informational, sourced off-chain from CoinGecko.<br/>
+    Votes are stored on-chain and pay gas only — no app fee.
+  </footer>
+</main>
+
+<script>
+const companies = [
+  {id:0,ticker:"MSTR",label:"Strategy",coin:"BTC",cls:"btc",holdings:597325,cost:23.4e9,value:41.2e9,bull:312,bear:88,my:null},
+  {id:1,ticker:"BMNR",label:"BitMine",coin:"ETH",cls:"eth",holdings:1230000,cost:4.1e9,value:3.65e9,bull:140,bear:205,my:null},
+  {id:2,ticker:"FWDI",label:"Forward",coin:"SOL",cls:"sol",holdings:6822000,cost:0.98e9,value:1.34e9,bull:77,bear:41,my:null},
+];
+
+// Büyük USD'yi kısalt: 41.2B / 980.0M
+function usdShort(n){
+  const a=Math.abs(n),s=n<0?"-":"";
+  if(a>=1e9) return `${s}$${(a/1e9).toFixed(2)}B`;
+  if(a>=1e6) return `${s}$${(a/1e6).toFixed(1)}M`;
+  return `${s}$${a.toLocaleString("en-US",{maximumFractionDigits:0})}`;
+}
+const coinAmt=(n,s)=>n.toLocaleString("en-US",{maximumFractionDigits:0})+" "+s;
+const pct=n=>(n>=0?"+":"")+n.toFixed(2)+"%";
+const now=()=>new Date().toLocaleTimeString("en-US");
+
+function render(){
+  const root=document.getElementById("cards");
+  root.innerHTML="";
+  for(const c of companies){
+    const pnl=c.value-c.cost, pnlPct=(pnl/c.cost)*100, up=pnl>=0;
+    const total=c.bull+c.bear;
+    const bullPct=total?(c.bull/total)*100:50, bearPct=100-bullPct;
+    const el=document.createElement("article");
+    el.className="card "+(up?"up":"down");
+    el.innerHTML=`
+      <div class="phead">
+        <div class="coin ${c.cls}">${c.coin}</div>
+        <div class="phead__t">
+          <span class="ticker">${c.ticker}</span>
+          <span class="subname">${c.label} · ${c.coin} treasury</span>
+        </div>
+      </div>
+
+      <div class="pl">
+        <span class="arrow">${up?"▲":"▼"}</span>
+        <span class="pl__val">${usdShort(pnl)}</span>
+        <span class="pl__pct">${pct(pnlPct)}</span>
+      </div>
+
+      <dl class="grid">
+        <div><dt>Holdings</dt><dd>${coinAmt(c.holdings,c.coin)}</dd></div>
+        <div><dt>Cost basis</dt><dd>${usdShort(c.cost)}</dd></div>
+        <div><dt>Current value</dt><dd>${usdShort(c.value)}</dd></div>
+        <div><dt>Profit / Loss</dt><dd>${usdShort(pnl)}</dd></div>
+      </dl>
+      <div class="updated"><span class="dot"></span> Updated ${now()}</div>
+
+      <div class="bar">
+        <div class="track">
+          <div class="bull" style="width:${bullPct}%"></div>
+          <div class="bear" style="width:${bearPct}%"></div>
+        </div>
+        <div class="legend">
+          <span class="b1">🐂 ${bullPct.toFixed(0)}%</span>
+          <span class="ct">${total} votes</span>
+          <span class="b2">${bearPct.toFixed(0)}% 🐻</span>
+        </div>
+      </div>
+
+      <div class="vote">
+        <button class="vbtn bull ${c.my==='bull'?'on':''}" data-id="${c.id}" data-v="bull">🐂 Bullish</button>
+        <button class="vbtn bear ${c.my==='bear'?'on':''}" data-id="${c.id}" data-v="bear">🐻 Bearish</button>
+        <div class="vstatus">${c.my?`Your vote: <strong>${c.my==='bull'?'Bullish':'Bearish'}</strong> · you can change it in 1h`:"Bull or bear? Cast your vote 👇"}</div>
+      </div>`;
+    root.appendChild(el);
+  }
+  root.querySelectorAll(".vbtn").forEach(b=>{
+    b.onclick=()=>{
+      const c=companies.find(x=>x.id==b.dataset.id), v=b.dataset.v;
+      if(c.my===v) return;
+      if(c.my==='bull')c.bull--; if(c.my==='bear')c.bear--;
+      if(v==='bull')c.bull++; else c.bear++;
+      c.my=v; render();
+    };
+  });
+}
+render();
+</script>
+</body>
+</html>
