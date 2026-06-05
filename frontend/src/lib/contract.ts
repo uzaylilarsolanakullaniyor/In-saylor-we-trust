@@ -34,6 +34,10 @@ export interface Company {
   coinId: "bitcoin" | "ethereum" | "solana";
   coinSymbol: string;
   match: string[];
+  // Whether voting is enabled. CoinGecko only reports a cost basis (entry
+  // value) for Strategy, so P/L — and therefore betting — is only meaningful
+  // there. BitMine/Forward are shown info-only (holdings + current value).
+  votable: boolean;
 }
 
 export const COMPANIES: Company[] = [
@@ -44,6 +48,7 @@ export const COMPANIES: Company[] = [
     coinId: "bitcoin",
     coinSymbol: "BTC",
     match: ["strategy", "microstrategy"],
+    votable: true, // has cost basis -> full P/L + voting
   },
   {
     id: 1,
@@ -52,6 +57,7 @@ export const COMPANIES: Company[] = [
     coinId: "ethereum",
     coinSymbol: "ETH",
     match: ["bitmine"],
+    votable: false, // no cost basis from CoinGecko -> info-only
   },
   {
     id: 2,
@@ -60,6 +66,7 @@ export const COMPANIES: Company[] = [
     coinId: "solana",
     coinSymbol: "SOL",
     match: ["forward"],
+    votable: false, // no cost basis from CoinGecko -> info-only
   },
 ];
 

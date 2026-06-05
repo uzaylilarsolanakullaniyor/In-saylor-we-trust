@@ -1,6 +1,8 @@
 // ============================================================
 // FEATURE 1 — Real-time P/L panel for one company.
-// Green when in profit, red at a loss. Data from CoinGecko.
+// Full P/L (green/red) when CoinGecko reports a cost basis (Strategy).
+// When there's no cost basis (BitMine/Forward), show an info-only layout:
+// holdings + current value, no P/L, no color.
 // ============================================================
 
 import type { CompanyPnL } from "../lib/coingecko";
@@ -39,6 +41,39 @@ export function PnLPanel({ data }: { data: CompanyPnL }) {
     );
   }
 
+  // No cost basis reported -> info-only layout (no P/L, no color).
+  const hasCostBasis = data.costBasisUsd > 0;
+
+  if (!hasCostBasis) {
+    return (
+      <>
+        {head}
+
+        <div className="pl pl--flat">
+          <span className="pl__val">{fmtUsdShort(data.currentValueUsd)}</span>
+          <span className="pl__tag">current value</span>
+        </div>
+
+        <dl className="grid">
+          <div>
+            <dt>Holdings</dt>
+            <dd>{fmtCoin(data.holdings, company.coinSymbol)}</dd>
+          </div>
+          <div>
+            <dt>Current value</dt>
+            <dd>{fmtUsdShort(data.currentValueUsd)}</dd>
+          </div>
+        </dl>
+
+        <div className="note">Cost basis not reported by CoinGecko — P/L unavailable.</div>
+        <div className="updated">
+          <span className="dot" /> Updated {new Date(data.fetchedAt).toLocaleTimeString("en-US")}
+        </div>
+      </>
+    );
+  }
+
+  // Full P/L layout (Strategy).
   const up = data.pnlUsd >= 0;
   const pctStr = `${data.pnlPercent >= 0 ? "+" : ""}${data.pnlPercent.toFixed(2)}%`;
 

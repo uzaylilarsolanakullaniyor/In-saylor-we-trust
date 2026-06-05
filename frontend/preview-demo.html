@@ -11,8 +11,8 @@
   --text:#eef2f8;--muted:#7d879c;--border:#222a3c;--accent:#3b82f6;
 }
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;color:var(--text);min-height:100vh;
+html{scroll-behavior:smooth;background:#070a10;min-height:100%}
+body{margin:0;color:var(--text);min-height:100vh;background-color:#070a10;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;
   background:
     radial-gradient(900px 500px at 15% -10%, #14306022 0%, transparent 60%),
@@ -53,6 +53,7 @@ body{margin:0;color:var(--text);min-height:100vh;
 .card::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;opacity:.9}
 .card.up::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
 .card.down::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+.card.flat::before{background:linear-gradient(90deg,transparent,#3a465c,transparent)}
 .card:hover{transform:translateY(-4px);border-color:#33405c;box-shadow:0 18px 40px -18px #000}
 
 /* P/L head */
@@ -73,6 +74,10 @@ body{margin:0;color:var(--text);min-height:100vh;
 .up .pl__val{color:var(--green)} .up .pl__pct{color:var(--green);background:var(--green-glow)}
 .down .pl__val{color:var(--red)} .down .pl__pct{color:var(--red);background:var(--red-glow)}
 .arrow{font-size:.9rem}
+.pl--flat .pl__val{color:var(--text)}
+.pl__tag{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.note{color:var(--muted);font-size:.74rem;margin:.5rem 0 0;font-style:italic}
+.vhint{color:var(--muted);font-size:.82rem;margin:.4rem 0 0}
 
 /* Stats grid */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem .9rem;margin:.9rem 0 .2rem;
@@ -127,10 +132,12 @@ body{margin:0;color:var(--text);min-height:100vh;
 </main>
 
 <script>
+// Only Strategy has a cost basis from CoinGecko -> votable. The other two are
+// info-only (cost=0, no voting).
 const companies = [
-  {id:0,ticker:"MSTR",label:"Strategy",coin:"BTC",cls:"btc",holdings:597325,cost:23.4e9,value:41.2e9,bull:312,bear:88,my:null},
-  {id:1,ticker:"BMNR",label:"BitMine",coin:"ETH",cls:"eth",holdings:1230000,cost:4.1e9,value:3.65e9,bull:140,bear:205,my:null},
-  {id:2,ticker:"FWDI",label:"Forward",coin:"SOL",cls:"sol",holdings:6822000,cost:0.98e9,value:1.34e9,bull:77,bear:41,my:null},
+  {id:0,ticker:"MSTR",label:"Strategy",coin:"BTC",cls:"btc",holdings:597325,cost:23.4e9,value:41.2e9,bull:312,bear:88,my:null,votable:true},
+  {id:1,ticker:"BMNR",label:"BitMine",coin:"ETH",cls:"eth",holdings:1230000,cost:0,value:3.65e9,votable:false},
+  {id:2,ticker:"FWDI",label:"Forward",coin:"SOL",cls:"sol",holdings:6822000,cost:0,value:1.34e9,votable:false},
 ];
 
 // Büyük USD'yi kısalt: 41.2B / 980.0M
@@ -148,10 +155,42 @@ function render(){
   const root=document.getElementById("cards");
   root.innerHTML="";
   for(const c of companies){
+    const el=document.createElement("article");
+
+    // --- Info-only card (no cost basis -> no P/L, no voting) ---
+    if(!c.votable){
+      el.className="card flat";
+      el.innerHTML=`
+        <div class="phead">
+          <div class="coin ${c.cls}">${c.coin}</div>
+          <div class="phead__t">
+            <span class="ticker">${c.ticker}</span>
+            <span class="subname">${c.label} · ${c.coin} treasury</span>
+          </div>
+        </div>
+
+        <div class="pl pl--flat">
+          <span class="pl__val">${usdShort(c.value)}</span>
+          <span class="pl__tag">current value</span>
+        </div>
+
+        <dl class="grid">
+          <div><dt>Holdings</dt><dd>${coinAmt(c.holdings,c.coin)}</dd></div>
+          <div><dt>Current value</dt><dd>${usdShort(c.value)}</dd></div>
+        </dl>
+
+        <div class="note">Cost basis not reported by CoinGecko — P/L unavailable.</div>
+        <div class="updated"><span class="dot"></span> Updated ${now()}</div>
+
+        <p class="vhint">🔒 Voting disabled — no cost-basis data for this company.</p>`;
+      root.appendChild(el);
+      continue;
+    }
+
+    // --- Full card (Strategy): P/L + voting ---
     const pnl=c.value-c.cost, pnlPct=(pnl/c.cost)*100, up=pnl>=0;
     const total=c.bull+c.bear;
     const bullPct=total?(c.bull/total)*100:50, bearPct=100-bullPct;
-    const el=document.createElement("article");
     el.className="card "+(up?"up":"down");
     el.innerHTML=`
       <div class="phead">

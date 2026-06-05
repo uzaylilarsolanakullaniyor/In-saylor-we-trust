@@ -85,7 +85,7 @@ export function VoteButtons({
     <div className="vote">
       <button
         className={`vbtn bull ${currentVote === Sentiment.Bullish ? "on" : ""}`}
-        disabled={busy || currentVote === Sentiment.Bullish || (changeBlocked && currentVote !== Sentiment.Bullish)}
+        disabled={busy || changeBlocked || currentVote === Sentiment.Bullish}
         onClick={() => cast(Sentiment.Bullish)}
       >
         🐂 Bullish
@@ -93,7 +93,7 @@ export function VoteButtons({
 
       <button
         className={`vbtn bear ${currentVote === Sentiment.Bearish ? "on" : ""}`}
-        disabled={busy || currentVote === Sentiment.Bearish || (changeBlocked && currentVote !== Sentiment.Bearish)}
+        disabled={busy || changeBlocked || currentVote === Sentiment.Bearish}
         onClick={() => cast(Sentiment.Bearish)}
       >
         🐻 Bearish

@@ -79,19 +79,27 @@ export default function App() {
       <section className="cards">
         {COMPANIES.map((company) => {
           const data = pnl.find((p) => p.company.id === company.id);
-          const up = data && !data.error ? data.pnlUsd >= 0 : true;
+          // Card tone: green/red only when we actually have a P/L (cost basis).
+          const hasPnl = Boolean(data && !data.error && data.costBasisUsd > 0);
+          const tone = hasPnl ? (data!.pnlUsd >= 0 ? "up" : "down") : "flat";
+
           return (
-            <article key={company.id} className={`card ${up ? "up" : "down"}`}>
+            <article key={company.id} className={`card ${tone}`}>
               {data ? (
                 <PnLPanel data={data} />
               ) : (
                 <div className="bar--muted">Loading {company.label}…</div>
               )}
 
-              {/* key={tick} forces a remount so the bar refetches post-vote */}
-              <SentimentBar key={`bar-${company.id}-${tick}`} companyId={company.id} />
-
-              <VoteButtons companyId={company.id} onVoted={refreshBars} />
+              {company.votable ? (
+                <>
+                  {/* key={tick} forces a remount so the bar refetches post-vote */}
+                  <SentimentBar key={`bar-${company.id}-${tick}`} companyId={company.id} />
+                  <VoteButtons companyId={company.id} onVoted={refreshBars} />
+                </>
+              ) : (
+                <p className="vhint">🔒 Voting disabled — no cost-basis data for this company.</p>
+              )}
             </article>
           );
         })}

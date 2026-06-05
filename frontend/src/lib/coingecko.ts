@@ -1,26 +1,17 @@
 // ============================================================
-// STEP 5 — CoinGecko integration.
-// Fetches treasury holdings for bitcoin/ethereum/solana, filters to
-// the company we care about (flexible substring match), and computes P/L.
+// STEP 5 — CoinGecko integration (via our cached serverless proxy).
 //
-// The contract NEVER sees this data. It's display-only, computed here.
+// The browser no longer calls CoinGecko directly (that returned 401 client-side
+// and didn't scale). Instead it calls OUR /api/treasuries endpoint, which
+// fetches CoinGecko server-side and is cached by Vercel's CDN for 1 day.
+//
+// This file: fetch the cached payload, filter to our 3 companies (flexible
+// substring match), and compute P/L. The contract NEVER sees this data.
 // ============================================================
 
 import { COMPANIES, type Company } from "./contract";
 
-// --- Resolve API base + auth header from the chosen tier. ---
-const TIER = import.meta.env.VITE_COINGECKO_TIER ?? "demo";
-const API_KEY = import.meta.env.VITE_COINGECKO_API_KEY ?? "";
-
-const BASE_URL =
-  TIER === "pro"
-    ? "https://pro-api.coingecko.com/api/v3"
-    : "https://api.coingecko.com/api/v3";
-
-const KEY_HEADER = TIER === "pro" ? "x-cg-pro-api-key" : "x-cg-demo-api-key";
-
-// --- Shape of a single company entry in the API response. ---
-// (Only the fields we use; the real payload has more.)
+// --- Shape of a single company entry in the CoinGecko response. ---
 interface TreasuryCompanyRaw {
   name: string;
   symbol: string;
@@ -32,6 +23,11 @@ interface TreasuryCompanyRaw {
 interface TreasuryResponse {
   companies: TreasuryCompanyRaw[];
 }
+
+// /api/treasuries returns { bitcoin: {...}, ethereum: {...}, solana: {...} }
+// where each value is a TreasuryResponse OR an { error } object.
+type CoinPayload = TreasuryResponse | { error: string };
+type ApiPayload = Record<string, CoinPayload | undefined>;
 
 // --- What our UI consumes: a company's holdings + computed P/L. ---
 export interface CompanyPnL {
@@ -45,13 +41,8 @@ export interface CompanyPnL {
   error?: string; // set if this company couldn't be resolved
 }
 
-/**
- * Fetch + filter + compute P/L for ONE company.
- * Returns a CompanyPnL even on failure (with `.error` set) so the UI
- * can render a graceful "data unavailable" state instead of crashing.
- */
-export async function fetchCompanyPnL(company: Company): Promise<CompanyPnL> {
-  const empty = (error: string): CompanyPnL => ({
+function emptyPnL(company: Company, error: string): CompanyPnL {
+  return {
     company,
     holdings: 0,
     costBasisUsd: 0,
@@ -60,55 +51,64 @@ export async function fetchCompanyPnL(company: Company): Promise<CompanyPnL> {
     pnlPercent: 0,
     fetchedAt: Date.now(),
     error,
-  });
-
-  try {
-    const res = await fetch(
-      `${BASE_URL}/companies/public_treasury/${company.coinId}`,
-      { headers: { [KEY_HEADER]: API_KEY, accept: "application/json" } },
-    );
-
-    if (!res.ok) {
-      return empty(`CoinGecko ${res.status} ${res.statusText}`);
-    }
-
-    const data = (await res.json()) as TreasuryResponse;
-
-    // FLEXIBLE FILTER: case-insensitive substring match against the
-    // company's known aliases (e.g. "strategy" matches "MicroStrategy").
-    const hit = data.companies?.find((c) => {
-      const name = (c.name ?? "").toLowerCase();
-      return company.match.some((alias) => name.includes(alias));
-    });
-
-    if (!hit) {
-      return empty(`"${company.label}" not found in ${company.coinId} list`);
-    }
-
-    // P/L MATH — the core of the panel.
-    const costBasisUsd = hit.total_entry_value_usd ?? 0;
-    const currentValueUsd = hit.total_current_value_usd ?? 0;
-    const pnlUsd = currentValueUsd - costBasisUsd;
-    // Guard against divide-by-zero if cost basis is missing.
-    const pnlPercent = costBasisUsd > 0 ? (pnlUsd / costBasisUsd) * 100 : 0;
-
-    return {
-      company,
-      holdings: hit.total_holdings ?? 0,
-      costBasisUsd,
-      currentValueUsd,
-      pnlUsd,
-      pnlPercent,
-      fetchedAt: Date.now(),
-    };
-  } catch (e) {
-    return empty(e instanceof Error ? e.message : "Unknown fetch error");
-  }
+  };
 }
 
-/** Fetch all three companies in parallel. */
+// Compute P/L for one company from its coin's raw treasury response.
+function computePnL(company: Company, data: CoinPayload | undefined): CompanyPnL {
+  if (!data) return emptyPnL(company, `No data for ${company.coinId}`);
+  if ("error" in data) return emptyPnL(company, `CoinGecko: ${data.error}`);
+
+  // FLEXIBLE FILTER: case-insensitive substring match against the company's
+  // known aliases (e.g. "strategy" matches "Strategy"/"MicroStrategy").
+  const hit = data.companies?.find((c) => {
+    const name = (c.name ?? "").toLowerCase();
+    return company.match.some((alias) => name.includes(alias));
+  });
+
+  if (!hit) {
+    return emptyPnL(company, `"${company.label}" not found in ${company.coinId} list`);
+  }
+
+  // P/L MATH — the core of the panel.
+  const costBasisUsd = hit.total_entry_value_usd ?? 0;
+  const currentValueUsd = hit.total_current_value_usd ?? 0;
+  const pnlUsd = currentValueUsd - costBasisUsd;
+  // Guard against divide-by-zero if cost basis is missing/zero.
+  const pnlPercent = costBasisUsd > 0 ? (pnlUsd / costBasisUsd) * 100 : 0;
+
+  return {
+    company,
+    holdings: hit.total_holdings ?? 0,
+    costBasisUsd,
+    currentValueUsd,
+    pnlUsd,
+    pnlPercent,
+    fetchedAt: Date.now(),
+  };
+}
+
+/**
+ * Fetch the cached payload from our own /api/treasuries and compute P/L for
+ * all three companies. Returns a graceful error state per company on failure
+ * so the UI never crashes.
+ */
 export async function fetchAllPnL(): Promise<CompanyPnL[]> {
-  return Promise.all(COMPANIES.map(fetchCompanyPnL));
+  let payload: ApiPayload = {};
+  try {
+    const res = await fetch("/api/treasuries", {
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) {
+      return COMPANIES.map((c) => emptyPnL(c, `API ${res.status} ${res.statusText}`));
+    }
+    payload = (await res.json()) as ApiPayload;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "fetch failed";
+    return COMPANIES.map((c) => emptyPnL(c, msg));
+  }
+
+  return COMPANIES.map((c) => computePnL(c, payload[c.coinId]));
 }
 
 // --- Formatting helpers used by the UI. ---
