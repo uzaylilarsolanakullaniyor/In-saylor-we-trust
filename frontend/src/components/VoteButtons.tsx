@@ -4,9 +4,16 @@
 // ============================================================
 
 import { useEffect, useRef } from "react";
-import { useAccount, useReadContract, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import {
+  useAccount,
+  useChainId,
+  useReadContract,
+  useSendTransaction,
+  useSwitchChain,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { encodeFunctionData, concatHex } from "viem";
-import { CONTRACT_ADDRESS, SENTIMENT_ABI, Sentiment, BUILDER_CODE_SUFFIX } from "../lib/contract";
+import { CONTRACT_ADDRESS, SENTIMENT_ABI, Sentiment, BUILDER_CODE_SUFFIX, ACTIVE_CHAIN } from "../lib/contract";
 
 export function VoteButtons({
   companyId,
@@ -16,13 +23,19 @@ export function VoteButtons({
   onVoted: () => void; // parent refetches the sentiment bar after success
 }) {
   const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+  const wrongNetwork = isConnected && chainId !== ACTIVE_CHAIN.id;
 
   // What has THIS wallet already voted? Drives vote vs changeVote + highlight.
+  // chainId pins the read to Base mainnet so it works even if the wallet is
+  // currently on another network.
   const { data: current, refetch: refetchUserVote } = useReadContract({
     address: CONTRACT_ADDRESS,
     abi: SENTIMENT_ABI,
     functionName: "getUserVote",
     args: address ? [companyId, address] : undefined,
+    chainId: ACTIVE_CHAIN.id,
     query: { enabled: Boolean(address) },
   });
 
@@ -32,6 +45,7 @@ export function VoteButtons({
     abi: SENTIMENT_ABI,
     functionName: "changeCooldownRemaining",
     args: address ? [companyId, address] : undefined,
+    chainId: ACTIVE_CHAIN.id,
     query: { enabled: Boolean(address), refetchInterval: 10_000 },
   });
 
@@ -42,6 +56,7 @@ export function VoteButtons({
   // Wait for the tx to be mined, then refresh the UI.
   const { isLoading: isMining, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
+    chainId: ACTIVE_CHAIN.id,
     query: { enabled: Boolean(txHash) },
   });
 
@@ -78,6 +93,7 @@ export function VoteButtons({
     sendTransaction({
       to: CONTRACT_ADDRESS,
       data: concatHex([calldata, BUILDER_CODE_SUFFIX]),
+      chainId: ACTIVE_CHAIN.id, // force Base mainnet (prompts a switch if needed)
     });
   }
 
@@ -88,6 +104,16 @@ export function VoteButtons({
 
   if (!isConnected) {
     return <p className="vhint">Connect a wallet to vote.</p>;
+  }
+
+  // Wrong network: reads still work (pinned to mainnet), but voting needs the
+  // wallet on Base. Offer a one-click switch instead of a confusing tx error.
+  if (wrongNetwork) {
+    return (
+      <button className="vbtn switch" onClick={() => switchChain({ chainId: ACTIVE_CHAIN.id })}>
+        ⚠️ Switch to {ACTIVE_CHAIN.name} to vote
+      </button>
+    );
   }
 
   return (

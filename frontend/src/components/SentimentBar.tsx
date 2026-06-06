@@ -4,7 +4,7 @@
 // ============================================================
 
 import { useReadContract } from "wagmi";
-import { CONTRACT_ADDRESS, SENTIMENT_ABI } from "../lib/contract";
+import { CONTRACT_ADDRESS, SENTIMENT_ABI, ACTIVE_CHAIN } from "../lib/contract";
 
 export function SentimentBar({ companyId }: { companyId: number }) {
   // useReadContract = gas-free view call. `query.refetchInterval` makes it
@@ -14,6 +14,7 @@ export function SentimentBar({ companyId }: { companyId: number }) {
     abi: SENTIMENT_ABI,
     functionName: "getResults",
     args: [companyId],
+    chainId: ACTIVE_CHAIN.id, // always read from Base mainnet, regardless of wallet network
     query: { refetchInterval: 15_000 }, // light poll every 15s
   });
 
