@@ -60,10 +60,12 @@ Browser ──reads──▶ /api/treasuries (Vercel serverless, cached 1 day) �
 ## 4. Tech stack & key files
 
 - **Contract:** Solidity 0.8.24 — `contracts/SentimentVoting.sol`
-- **Frontend:** React + Vite + wagmi + viem — `frontend/`
+- **Frontend:** React + Vite + wagmi + viem + Privy — `frontend/`
 
 | File | Purpose |
 |------|---------|
+| `frontend/src/main.tsx` | Providers — Privy → React Query → wagmi; Privy modal config |
+| `frontend/src/wagmi.ts` | wagmi config via `@privy-io/wagmi` (chains/transports, no connectors) |
 | `frontend/api/treasuries.ts` | Serverless CoinGecko proxy + daily cache (server-side key) |
 | `frontend/src/lib/contract.ts` | Contract address, ABI, chain, companies, builder code |
 | `frontend/src/lib/coingecko.ts` | Fetch `/api/treasuries`, filter, compute P/L |
@@ -83,6 +85,15 @@ Browser ──reads──▶ /api/treasuries (Vercel serverless, cached 1 day) �
 | `VITE_CHAIN` | `base` | targets mainnet |
 | `VITE_CONTRACT_ADDRESS` | `0x52fd75BD49712980F0f449e81499D84b26642018` | also hardcoded as default in code |
 | `COINGECKO_API_KEY` | *(free CoinGecko Demo key, `CG-…`)* | **server-side only — NO `VITE_` prefix**, never exposed to browser |
+| `VITE_PRIVY_APP_ID` | *(Privy App ID from dashboard.privy.io)* | **required** — drives the wallet-connect modal. Without it the app shows a "Missing VITE_PRIVY_APP_ID" notice. |
+
+> **Wallet connect = Privy.** Connection is handled by Privy's single clean
+> modal (`@privy-io/react-auth` + `@privy-io/wagmi`) with a curated wallet list
+> (`base_account`, `metamask`, `coinbase_wallet`) instead of one button per
+> installed extension. Privy feeds the connected wallet into wagmi, so all
+> existing wagmi hooks (`useReadContract`, `useSendTransaction`) are unchanged.
+> Set the Privy app's allowed domain to `in-saylor-we-trust.vercel.app` in the
+> Privy dashboard.
 
 > CoinGecko rate-limits keyless requests from Vercel's cloud IP (HTTP 429), so a
 > free Demo key is required **on the server**. With daily caching, usage is tiny.

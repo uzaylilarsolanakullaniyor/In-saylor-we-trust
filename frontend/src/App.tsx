@@ -4,7 +4,8 @@
 // ============================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { useAccount } from "wagmi";
+import { usePrivy } from "@privy-io/react-auth";
 import { COMPANIES, ACTIVE_CHAIN } from "./lib/contract";
 import { fetchAllPnL, type CompanyPnL } from "./lib/coingecko";
 import { PnLPanel } from "./components/PnLPanel";
@@ -12,17 +13,29 @@ import { VoteButtons } from "./components/VoteButtons";
 import { SentimentBar } from "./components/SentimentBar";
 
 function WalletBar() {
-  const { address, isConnected } = useAccount();
-  const { connectors, connect, isPending } = useConnect();
-  const { disconnect } = useDisconnect();
+  // The connected address still comes from wagmi (Privy feeds it in), but the
+  // connect/disconnect flow is Privy's single clean modal.
+  const { address } = useAccount();
+  const { ready, authenticated, login, logout } = usePrivy();
 
-  if (isConnected) {
+  // Avoid a flicker of the wrong button before Privy has rehydrated state.
+  if (!ready) {
+    return (
+      <div className="wallet">
+        <button className="btn-ghost" disabled>
+          Loading…
+        </button>
+      </div>
+    );
+  }
+
+  if (authenticated && address) {
     return (
       <div className="wallet">
         <span className="wallet__addr">
-          {address?.slice(0, 6)}…{address?.slice(-4)}
+          {address.slice(0, 6)}…{address.slice(-4)}
         </span>
-        <button className="btn-ghost" onClick={() => disconnect()}>
+        <button className="btn-ghost" onClick={() => logout()}>
           Disconnect
         </button>
       </div>
@@ -31,11 +44,9 @@ function WalletBar() {
 
   return (
     <div className="wallet">
-      {connectors.map((c) => (
-        <button className="btn-ghost" key={c.uid} onClick={() => connect({ connector: c })} disabled={isPending}>
-          Connect {c.name}
-        </button>
-      ))}
+      <button className="btn-ghost" onClick={() => login()}>
+        Connect Wallet
+      </button>
     </div>
   );
 }
